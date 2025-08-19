@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "netherdb": {
+      "description": "A Model Context Protocol (MCP) server that provides semantic search and knowledge retrieval capabilities for Obsidian knowledge bases. This server enables LLMs to access, search, and retrieve information from indexed Obsidian vaults using vector embeddings and metadata filtering, effectively treating the knowledge base as an extended memory for RAG (Retrieval-Augmented Generation) workflows.",
+      "command": "node",
+      "args": [
+        "/Users/bri64/Documents/obsidian/netherdb/dist/cli/index.js",
+        "mcp",
+        "start",
+        "--db-path",
+        "/Users/bri64/Documents/obsidian/vector-db/"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
