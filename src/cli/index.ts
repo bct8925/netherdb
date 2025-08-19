@@ -22,7 +22,8 @@ async function main() {
   program
     .name('netherdb')
     .description('CLI for NetherDB - Obsidian Vector Database system')
-    .version('0.1.0');
+    .version('0.1.0')
+    .option('-g, --global', 'Use global configuration directory (~/.netherdb)');
 
   // Register command handlers
   const indexCommand = new IndexCommand();

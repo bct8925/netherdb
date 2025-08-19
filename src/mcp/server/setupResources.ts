@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { VectorDatabase } from '../../database/interfaces/VectorDatabase.js';
-import type { Logger } from '../../utils/Logger.js';
+import type { VectorDatabase } from '../../database/interfaces/VectorDatabase';
+import type { Logger } from '../../utils/Logger';
 
 function createPreview(content: string, maxLength: number = 150): string {
   const cleaned = content.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();

@@ -1,8 +1,8 @@
-import type { VectorDatabase } from '../database/interfaces/VectorDatabase.js';
-import type { TransformersEmbedding } from '../embeddings/TransformersEmbedding.js';
-import type { SearchResult } from '../types/Common.js';
-import type { Logger } from '../utils/Logger.js';
-import { calculateRelevanceScore } from '../utils/RelevanceCalculator.js';
+import type { VectorDatabase } from '../database/interfaces/VectorDatabase';
+import type { TransformersEmbedding } from '../embeddings/TransformersEmbedding';
+import type { SearchResult } from '../types/Common';
+import type { Logger } from '../utils/Logger';
+import { calculateRelevanceScore } from '../utils/RelevanceCalculator';
 
 export interface SearchFilters {
   tags?: string[] | undefined;

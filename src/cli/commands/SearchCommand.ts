@@ -3,16 +3,13 @@ import { Logger } from '../../utils/Logger.js';
 import { DatabaseFactory } from '../../database/factory.js';
 import { TransformersEmbedding } from '../../embeddings/TransformersEmbedding.js';
 import { SearchService, type FormattedSearchResult, type SearchType } from '../../services/SearchService.js';
-import type { DatabaseConfig } from '../../types/Config.js';
-import { readFile } from 'fs/promises';
+import { ConfigHelper, type BaseCommandOptions } from '../../utils/ConfigHelper.js';
 import { formatDistanceToNow } from 'date-fns';
 import { formatRelevancePercent, createRelevanceBar } from '../../utils/RelevanceCalculator.js';
 
-export interface SearchOptions {
+export interface SearchOptions extends BaseCommandOptions {
   query?: string;
   limit?: number;
-  config?: string;
-  dbPath?: string;
   json?: boolean;
   verbose?: boolean;
   semantic?: boolean;
@@ -44,16 +41,16 @@ export class SearchCommand {
       .option('--semantic', 'Force semantic (vector) search', false)
       .option('--keyword', 'Force keyword (text) search', false)
       .option('--browse', 'Browse all indexed documents', false)
-      .action((query: string, options: SearchOptions) => 
-        this.handleSearch({ ...options, query }));
+      .action((query: string, options: SearchOptions, command: Command) => 
+        this.handleSearch({ ...options, query }, command));
 
   }
 
-  private async handleSearch(options: SearchOptions): Promise<void> {
+  private async handleSearch(options: SearchOptions, command: Command): Promise<void> {
     try {
       // Handle browse mode
       if (options.browse) {
-        return this.handleBrowse(options);
+        return this.handleBrowse(options, command);
       }
 
       if (!options.query) {
@@ -64,7 +61,7 @@ export class SearchCommand {
       this.logger.info('Starting search operation', { options });
 
       // Load configuration and initialize components
-      const { searchService } = await this.initializeComponents(options);
+      const { searchService } = await this.initializeComponents(options, command);
 
       // Determine search type
       let searchType: SearchType = 'hybrid';
@@ -88,12 +85,12 @@ export class SearchCommand {
     }
   }
 
-  private async handleBrowse(options: SearchOptions): Promise<void> {
+  private async handleBrowse(options: SearchOptions, command: Command): Promise<void> {
     try {
       this.logger.info('Starting browse operation', { options });
 
       // Load configuration and initialize components
-      const { searchService } = await this.initializeComponents(options);
+      const { searchService } = await this.initializeComponents(options, command);
 
       // Get all documents
       const limit = options.limit ? parseInt(String(options.limit)) : 20;
@@ -113,14 +110,9 @@ export class SearchCommand {
     }
   }
 
-  private async initializeComponents(options: SearchOptions) {
-    // Load configuration
-    const config = await this.loadConfig(options.config || 'config/default.json');
-    
-    // Override config with CLI options
-    if (options.dbPath) {
-      config.database.connection.path = options.dbPath;
-    }
+  private async initializeComponents(options: SearchOptions, command: Command) {
+    // Load configuration with global support
+    const { config } = await ConfigHelper.loadConfigWithGlobalSupport(options, command);
 
     // Initialize components
     const embedding = new TransformersEmbedding({
@@ -239,44 +231,4 @@ export class SearchCommand {
     console.log(`💡 Tip: Use --verbose to see all chunks or --limit to show more/fewer documents`);
   }
 
-  private async loadConfig(configPath: string): Promise<DatabaseConfig> {
-    try {
-      const configContent = await readFile(configPath, 'utf-8');
-      return JSON.parse(configContent);
-    } catch {
-      // Use default config if file doesn't exist
-      this.logger.warn(`Config file not found at ${configPath}, using defaults`);
-      
-      return {
-        database: {
-          provider: 'lancedb' as const,
-          connection: {
-            path: './vector-db'
-          }
-        },
-        embedding: {
-          model: 'Xenova/all-MiniLM-L6-v2',
-          dimensions: 384
-        },
-        obsidian: {
-          vaultPath: process.cwd(),
-          chunking: {
-            maxTokens: 512,
-            overlapTokens: 50,
-            splitByHeaders: true,
-            splitByParagraphs: true,
-            includeHeaders: true,
-            preserveCodeBlocks: true,
-            preserveTables: true,
-            preserveCallouts: false
-          },
-          indexing: {
-            batchSize: 10,
-            includePatterns: ['*.md'],
-            excludePatterns: ['.git/**', 'node_modules/**', '.obsidian/**']
-          }
-        }
-      };
-    }
-  }
 }

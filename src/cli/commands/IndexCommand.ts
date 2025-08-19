@@ -7,19 +7,16 @@ import { ObsidianManager } from '../../obsidian/indexing/ObsidianManager.js';
 import { FileIndexer } from '../../obsidian/indexing/FileIndexer.js';
 import { IncrementalIndexer } from '../../obsidian/indexing/IncrementalIndexer.js';
 import { VersionTracker } from '../../obsidian/indexing/VersionTracker.js';
+import { ConfigHelper, type BaseCommandOptions } from '../../utils/ConfigHelper.js';
 import type { DatabaseConfig } from '../../types/Config.js';
 import type { VectorDatabase } from '../../database/interfaces/VectorDatabase.js';
-import { readFile } from 'fs/promises';
 
-export interface IndexOptions {
+export interface IndexOptions extends BaseCommandOptions {
   full?: boolean;
   incremental?: boolean;
   files?: string;
   dryRun?: boolean;
   batchSize?: number;
-  config?: string;
-  vaultPath?: string;
-  dbPath?: string;
   concurrency?: number;
 }
 
@@ -51,23 +48,15 @@ export class IndexCommand {
       .option('--vault-path <path>', 'Path to Obsidian vault (default: current directory)')
       .option('--db-path <path>', 'Path to vector database directory')
       .option('--concurrency <number>', 'Number of concurrent file processors', '3')
-      .action((options: IndexOptions) => this.handleIndex(options));
+      .action((options: IndexOptions, command: Command) => this.handleIndex(options, command));
   }
 
-  private async handleIndex(options: IndexOptions): Promise<void> {
+  private async handleIndex(options: IndexOptions, command: Command): Promise<void> {
     try {
       this.logger.info('Starting indexing operation', { options });
 
-      // Load configuration
-      const config = await this.loadConfig(options.config || 'config/default.json');
-      
-      // Override config with CLI options
-      if (options.vaultPath) {
-        config.obsidian.vaultPath = options.vaultPath;
-      }
-      if (options.dbPath) {
-        config.database.connection.path = options.dbPath;
-      }
+      // Load configuration with global support
+      const { config } = await ConfigHelper.loadConfigWithGlobalSupport(options, command);
 
       const batchSize = parseInt(String(options.batchSize || '10'));
       const concurrency = parseInt(String(options.concurrency || '3'));
@@ -490,47 +479,6 @@ export class IndexCommand {
       errors.forEach((error) => {
         console.log(`  ❌ ${error.file || 'Unknown file'}: ${error.error || 'Unknown error'}`);
       });
-    }
-  }
-
-  private async loadConfig(configPath: string): Promise<DatabaseConfig> {
-    try {
-      const configContent = await readFile(configPath, 'utf-8');
-      return JSON.parse(configContent);
-    } catch {
-      // Use default config if file doesn't exist
-      this.logger.warn(`Config file not found at ${configPath}, using defaults`);
-      
-      return {
-        database: {
-          provider: 'lancedb' as const,
-          connection: {
-            path: './vector-db'
-          }
-        },
-        embedding: {
-          model: 'Xenova/all-MiniLM-L6-v2',
-          dimensions: 384
-        },
-        obsidian: {
-          vaultPath: process.cwd(),
-          chunking: {
-            maxTokens: 512,
-            overlapTokens: 50,
-            splitByHeaders: true,
-            splitByParagraphs: true,
-            includeHeaders: true,
-            preserveCodeBlocks: true,
-            preserveTables: true,
-            preserveCallouts: false
-          },
-          indexing: {
-            batchSize: 10,
-            includePatterns: ['*.md'],
-            excludePatterns: ['.git/**', 'node_modules/**', '.obsidian/**']
-          }
-        }
-      };
     }
   }
 

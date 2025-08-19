@@ -6,11 +6,11 @@ import {
   getDocumentOutputSchema,
   type SearchKnowledgeInputType,
   type GetDocumentInputType,
-} from '../types.js';
-import type { VectorDatabase } from '../../database/interfaces/VectorDatabase.js';
-import type { TransformersEmbedding } from '../../embeddings/TransformersEmbedding.js';
-import type { Logger } from '../../utils/Logger.js';
-import { SearchService } from '../../services/SearchService.js';
+} from '../types';
+import type { VectorDatabase } from '../../database/interfaces/VectorDatabase';
+import type { TransformersEmbedding } from '../../embeddings/TransformersEmbedding';
+import type { Logger } from '../../utils/Logger';
+import { SearchService } from '../../services/SearchService';
 
 
 async function handleSearchKnowledge(

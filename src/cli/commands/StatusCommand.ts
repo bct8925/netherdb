@@ -6,14 +6,11 @@ import { VersionTracker } from '../../obsidian/indexing/VersionTracker.js';
 import { ObsidianManager } from '../../obsidian/indexing/ObsidianManager.js';
 import { IncrementalIndexer } from '../../obsidian/indexing/IncrementalIndexer.js';
 import { FileIndexer } from '../../obsidian/indexing/FileIndexer.js';
+import { ConfigHelper, type BaseCommandOptions } from '../../utils/ConfigHelper.js';
 import type { DatabaseConfig } from '../../types/Config.js';
-import { readFile } from 'fs/promises';
 import { formatDistanceToNow } from 'date-fns';
 
-export interface StatusOptions {
-  config?: string;
-  vaultPath?: string;
-  dbPath?: string;
+export interface StatusOptions extends BaseCommandOptions {
   verbose?: boolean;
   json?: boolean;
 }
@@ -58,23 +55,15 @@ export class StatusCommand {
       .option('--db-path <path>', 'Path to vector database directory')
       .option('--verbose', 'Show detailed information')
       .option('--json', 'Output status as JSON')
-      .action((options: StatusOptions) => this.handleStatus(options));
+      .action((options: StatusOptions, command: Command) => this.handleStatus(options, command));
   }
 
-  private async handleStatus(options: StatusOptions): Promise<void> {
+  private async handleStatus(options: StatusOptions, command: Command): Promise<void> {
     try {
       this.logger.info('Checking status', { options });
 
-      // Load configuration
-      const config = await this.loadConfig(options.config || 'config/default.json');
-      
-      // Override config with CLI options
-      if (options.vaultPath) {
-        config.obsidian.vaultPath = options.vaultPath;
-      }
-      if (options.dbPath) {
-        config.database.connection.path = options.dbPath;
-      }
+      // Load configuration with global support
+      const { config } = await ConfigHelper.loadConfigWithGlobalSupport(options, command);
 
       const vaultPath = config.obsidian?.vaultPath || process.cwd();
 
@@ -101,8 +90,8 @@ export class StatusCommand {
     const obsidianManager = new ObsidianManager(vaultPath, config.database.connection.path);
     const versionTracker = new VersionTracker(vaultPath, config.database.connection.path);
 
-    // Initialize database
-    await database.initialize();
+    // Check if database exists without creating it
+    const databaseExists = await database.databaseExists();
 
     // Vault information
     const isGitRepo = await GitUtils.isGitRepository(vaultPath);
@@ -136,20 +125,22 @@ export class StatusCommand {
     const markdownFiles = markdownFilesResult.map(file => file.path);
 
     // Database information
-    let databaseExists = false;
     let totalDocuments: number | undefined;
     let totalChunks: number | undefined;
     let lastIndexed: Date | undefined;
     let indexedSHA: string | undefined;
 
-    try {
-      const stats = await database.getStats();
-      databaseExists = true;
-      totalDocuments = stats.totalVectors; // Use available field
-      totalChunks = stats.totalVectors;
-    } catch (error) {
-      // Database doesn't exist or is inaccessible
-      this.logger.debug('Database not accessible', { error });
+    if (databaseExists) {
+      try {
+        // Only try to get stats if database exists
+        await database.initialize();
+        const stats = await database.getStats();
+        totalDocuments = stats.totalVectors; // Use available field
+        totalChunks = stats.totalVectors;
+      } catch (error) {
+        // Database exists but is inaccessible
+        this.logger.debug('Database exists but not accessible', { error });
+      }
     }
 
     // Version tracking information
@@ -327,45 +318,5 @@ export class StatusCommand {
     console.log('\n💡 Tip: Use --verbose for detailed information or --json for machine-readable output');
   }
 
-  private async loadConfig(configPath: string): Promise<DatabaseConfig> {
-    try {
-      const configContent = await readFile(configPath, 'utf-8');
-      return JSON.parse(configContent);
-    } catch {
-      // Use default config if file doesn't exist
-      this.logger.warn(`Config file not found at ${configPath}, using defaults`);
-      
-      return {
-        database: {
-          provider: 'lancedb' as const,
-          connection: {
-            path: './vector-db'
-          }
-        },
-        embedding: {
-          model: 'Xenova/all-MiniLM-L6-v2',
-          dimensions: 384
-        },
-        obsidian: {
-          vaultPath: process.cwd(),
-          chunking: {
-            maxTokens: 512,
-            overlapTokens: 50,
-            splitByHeaders: true,
-            splitByParagraphs: true,
-            includeHeaders: true,
-            preserveCodeBlocks: true,
-            preserveTables: true,
-            preserveCallouts: false
-          },
-          indexing: {
-            batchSize: 10,
-            includePatterns: ['*.md'],
-            excludePatterns: ['.git/**', 'node_modules/**', '.obsidian/**']
-          }
-        }
-      };
-    }
-  }
 }
 

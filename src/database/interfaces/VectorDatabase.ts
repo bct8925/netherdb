@@ -119,4 +119,10 @@ export interface VectorDatabase {
    * @returns Total count of vectors
    */
   count(): Promise<number>;
+
+  /**
+   * Check if the database/table exists without creating it
+   * @returns True if database exists
+   */
+  databaseExists(): Promise<boolean>;
 }

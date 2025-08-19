@@ -1,8 +1,8 @@
 import { Command } from 'commander';
-import { MCPServer, MCPServerConfig } from '../../mcp/server/MCPServer.js';
-import { Logger } from '../../utils/Logger.js';
-import type { DatabaseProviderConfig, EmbeddingConfig, AppConfig } from '../../types/Config.js';
-import { readFile } from 'fs/promises';
+import { MCPServer, MCPServerConfig } from '../../mcp/server/MCPServer';
+import { Logger } from '../../utils/Logger';
+import { ConfigHelper } from '../../utils/ConfigHelper';
+import type { DatabaseProviderConfig, EmbeddingConfig } from '../../types/Config';
 
 export class MCPCommand {
   private logger: Logger;
@@ -22,12 +22,12 @@ export class MCPCommand {
       .option('-c, --config <path>', 'Configuration file path')
       .option('-d, --db-path <path>', 'Path to vector database directory')
       .option('-v, --verbose', 'Enable verbose logging')
-      .action(async (options) => {
-        await this.startServer(options);
+      .action(async (options, command) => {
+        await this.startServer(options, command);
       });
   }
 
-  private async startServer(options: { verbose?: boolean; config?: string; dbPath?: string }): Promise<void> {
+  private async startServer(options: { verbose?: boolean; config?: string; dbPath?: string }, command: Command): Promise<void> {
     try {
       if (options.verbose) {
         // Logger doesn't have setLevel method - using verbose flag for future implementation
@@ -36,13 +36,8 @@ export class MCPCommand {
 
       this.logger.info('Starting MCP server...');
 
-      // Load configuration
-      const config = await this.loadConfig(options.config || 'config/default.json');
-      
-      // Override config with CLI options
-      if (options.dbPath) {
-        config.database.connection.path = options.dbPath;
-      }
+      // Load configuration with global support
+      const { config } = await ConfigHelper.loadConfigWithGlobalSupport(options, command);
 
       // Create database configuration
       const databaseConfig: DatabaseProviderConfig = config.database;
@@ -94,44 +89,4 @@ export class MCPCommand {
     }
   }
 
-  private async loadConfig(configPath: string): Promise<AppConfig> {
-    try {
-      const configContent = await readFile(configPath, 'utf-8');
-      return JSON.parse(configContent);
-    } catch {
-      // Use default config if file doesn't exist
-      this.logger.warn(`Config file not found at ${configPath}, using defaults`);
-      
-      return {
-        database: {
-          provider: 'lancedb' as const,
-          connection: {
-            path: './vector-db'
-          }
-        },
-        embedding: {
-          model: 'Xenova/all-MiniLM-L6-v2',
-          dimensions: 384
-        },
-        obsidian: {
-          vaultPath: process.cwd(),
-          chunking: {
-            maxTokens: 512,
-            overlapTokens: 50,
-            splitByHeaders: true,
-            splitByParagraphs: true,
-            includeHeaders: true,
-            preserveCodeBlocks: true,
-            preserveTables: true,
-            preserveCallouts: false
-          },
-          indexing: {
-            batchSize: 10,
-            includePatterns: ['*.md'],
-            excludePatterns: ['.git/**', 'node_modules/**', '.obsidian/**']
-          }
-        }
-      };
-    }
-  }
 }

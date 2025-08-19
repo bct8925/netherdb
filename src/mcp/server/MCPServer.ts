@@ -1,12 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { Logger } from '../../utils/Logger.js';
-import { DatabaseFactory } from '../../database/factory.js';
-import { TransformersEmbedding } from '../../embeddings/TransformersEmbedding.js';
-import type { VectorDatabase } from '../../database/interfaces/VectorDatabase.js';
-import type { DatabaseProviderConfig, EmbeddingConfig } from '../../types/Config.js';
-import { setupTools } from './setupTools.js';
-import { setupResources } from './setupResources.js';
+import { Logger } from '../../utils/Logger';
+import { DatabaseFactory } from '../../database/factory';
+import { TransformersEmbedding } from '../../embeddings/TransformersEmbedding';
+import type { VectorDatabase } from '../../database/interfaces/VectorDatabase';
+import type { DatabaseProviderConfig, EmbeddingConfig } from '../../types/Config';
+import { setupTools } from './setupTools';
+import { setupResources } from './setupResources';
 
 export interface MCPServerConfig {
   name: string;

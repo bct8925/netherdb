@@ -3,6 +3,7 @@
  */
 
 import { connect, Connection, Table } from '@lancedb/lancedb';
+import { existsSync } from 'fs';
 import { VectorDatabase, IndexConfig } from '../../interfaces/VectorDatabase';
 import {
   VectorData,
@@ -438,6 +439,26 @@ export class LanceDBProvider implements VectorDatabase {
       };
     } catch (error) {
       throw new Error(`Failed to query records: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async databaseExists(): Promise<boolean> {
+    // First check if the database directory exists at all
+    // This prevents LanceDB from creating the directory
+    if (!existsSync(this.connectionConfig.path)) {
+      return false;
+    }
+
+    try {
+      // Only connect if directory exists
+      const connection = await connect(this.connectionConfig.path);
+      
+      // Check if table exists
+      const tableNames = await connection.tableNames();
+      return tableNames.includes(this.tableConfig.name);
+    } catch {
+      // If we can't connect or check, assume it doesn't exist
+      return false;
     }
   }
 
