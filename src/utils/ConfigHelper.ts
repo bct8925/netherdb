@@ -32,7 +32,11 @@ export class ConfigHelper {
     }
 
     // Determine config path (global base or override)
-    const configPath = options.config || paths.configPath;
+    // If using global mode and no explicit config override, use global config path
+    const configPath =
+      isGlobal && options.config === 'config/default.json'
+        ? paths.configPath
+        : options.config || paths.configPath;
     const config = await ConfigHelper.loadConfig(configPath);
 
     // If in global mode, use global paths as base and apply option overrides
@@ -95,7 +99,7 @@ export class ConfigHelper {
           },
           indexing: {
             batchSize: 10,
-            includePatterns: ['*.md'],
+            includePatterns: ['**/*.md'],
             excludePatterns: [
               '.git/**',
               'node_modules/**',

@@ -7,7 +7,7 @@
     "netherdb": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
+    "build": "tsc --project tsconfig.build.json && npm link",
     "dev": "ts-node src/index.ts",
     "test": "jest",
     "test:watch": "jest --watch",

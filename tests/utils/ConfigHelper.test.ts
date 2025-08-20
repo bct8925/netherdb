@@ -211,7 +211,7 @@ describe('ConfigHelper', () => {
           },
           indexing: {
             batchSize: 10,
-            includePatterns: ['*.md'],
+            includePatterns: ['**/*.md'],
             excludePatterns: [
               '.git/**',
               'node_modules/**',

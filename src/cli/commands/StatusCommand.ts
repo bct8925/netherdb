@@ -21,7 +21,6 @@ interface StatusInfo {
     isGitRepo: boolean;
     currentSHA?: string;
     totalFiles: number;
-    markdownFiles: number;
   };
   database: {
     exists: boolean;
@@ -110,19 +109,13 @@ export class StatusCommand {
       excludePatterns: config.obsidian?.indexing?.excludePatterns,
     };
 
-    const allFilesResult = await obsidianManager.discoverFiles({
-      ...discoveryOptions,
-      fileExtensions: ['.md', '.txt', '.pdf', '.png', '.jpg', '.jpeg'],
-      includeHidden: false,
-    });
-    const allFiles = allFilesResult.map(file => file.path);
-
-    const markdownFilesResult = await obsidianManager.discoverFiles({
+    // Discover files based on include patterns (typically markdown files)
+    const filesResult = await obsidianManager.discoverFiles({
       ...discoveryOptions,
       fileExtensions: ['.md'],
       includeHidden: false,
     });
-    const markdownFiles = markdownFilesResult.map(file => file.path);
+    const files = filesResult.map(file => file.path);
 
     // Database information
     let totalDocuments: number | undefined;
@@ -207,8 +200,7 @@ export class StatusCommand {
       vault: {
         path: vaultPath,
         isGitRepo,
-        totalFiles: allFiles.length,
-        markdownFiles: markdownFiles.length
+        totalFiles: files.length
       },
       database: {
         exists: databaseExists,
@@ -255,7 +247,6 @@ export class StatusCommand {
       console.log(`  Current SHA: ${status.vault.currentSHA.substring(0, 8)}...`);
     }
     console.log(`  Total Files: ${status.vault.totalFiles}`);
-    console.log(`  Markdown Files: ${status.vault.markdownFiles}`);
 
     console.log('\n💾 Database Information:');
     console.log(`  Exists: ${status.database.exists ? '✅ Yes' : '❌ No'}`);
@@ -309,10 +300,10 @@ export class StatusCommand {
         console.log(`  Average chunks per document: ${avgChunksPerDoc}`);
       }
 
-      const coverage = status.vault.markdownFiles > 0 
-        ? ((status.database.totalDocuments || 0) / status.vault.markdownFiles * 100).toFixed(1)
+      const coverage = status.vault.totalFiles > 0 
+        ? ((status.database.totalDocuments || 0) / status.vault.totalFiles * 100).toFixed(1)
         : '0.0';
-      console.log(`  Index coverage: ${coverage}% of markdown files`);
+      console.log(`  Index coverage: ${coverage}% of files`);
     }
 
     console.log('\n💡 Tip: Use --verbose for detailed information or --json for machine-readable output');
