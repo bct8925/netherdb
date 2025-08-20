@@ -1,5 +1,5 @@
 import { ChunkStrategy, ChunkingResult, ChunkType, ChunkMetadata } from '../../types/Common';
-import { ParsedMarkdown } from '../parser/MarkdownParser';
+import { ParsedDocument } from '../parser/MarkdownParser';
 import { Logger } from '../../utils/Logger';
 
 /**
@@ -17,7 +17,7 @@ export abstract class ChunkingStrategy {
   /**
    * Chunk a parsed markdown document
    */
-  abstract chunk(document: ParsedMarkdown, sourceFile: string): Promise<ChunkingResult>;
+  abstract chunk(document: ParsedDocument, sourceFile: string): Promise<ChunkingResult>;
 
   /**
    * Estimate token count for text
@@ -120,10 +120,21 @@ export abstract class ChunkingStrategy {
   }
 
   /**
-   * Check if content contains WikiLinks
+   * Extract WikiLink targets that appear in the given content
    */
-  protected hasWikiLinks(content: string): boolean {
-    return /\[\[.*?\]\]/.test(content);
+  protected extractWikiLinkTargets(content: string, document: ParsedDocument): string[] {
+    const targets: string[] = [];
+    
+    // Find WikiLinks in the content by checking which document WikiLinks fall within this content
+    for (const wikiLink of document.wikiLinks) {
+      // Check if the WikiLink's original text appears in this chunk
+      if (content.includes(wikiLink.original)) {
+        targets.push(wikiLink.target);
+      }
+    }
+    
+    // Remove duplicates
+    return [...new Set(targets)];
   }
 
   /**
@@ -132,6 +143,7 @@ export abstract class ChunkingStrategy {
   protected createChunkMetadata(
     content: string,
     type: ChunkType,
+    document: ParsedDocument,
     baseMetadata: Partial<ChunkMetadata> = {}
   ): ChunkMetadata {
     const headingLevel = this.getHeadingLevel(content);
@@ -146,7 +158,7 @@ export abstract class ChunkingStrategy {
       hasCodeBlocks: this.hasCodeBlocks(content),
       hasTables: this.hasTables(content),
       hasCallouts: this.hasCallouts(content),
-      hasWikiLinks: this.hasWikiLinks(content),
+      wikiLinkTargets: this.extractWikiLinkTargets(content, document),
       custom: baseMetadata.custom || {},
     };
   }

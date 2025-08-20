@@ -124,7 +124,7 @@ export interface ChunkMetadata {
   hasCodeBlocks: boolean;
   hasTables: boolean;
   hasCallouts: boolean;
-  hasWikiLinks: boolean;
+  wikiLinkTargets: string[];
 
   // Custom fields
   custom: Record<string, unknown>;

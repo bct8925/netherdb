@@ -105,10 +105,16 @@ describe('Phase 2.2 Integration with Salesforce Knowledge Base', () => {
         expect(chunkResult.chunks.length).toBeGreaterThan(0);
 
         // Verify WikiLinks are preserved in metadata
-        const hasWikiLinks = chunkResult.chunks.some(c => c.metadata.hasWikiLinks);
+        const chunksWithWikiLinks = chunkResult.chunks.filter(c => c.metadata.wikiLinkTargets.length > 0);
         
         if (content.includes('[[') && content.includes(']]')) {
-          expect(hasWikiLinks).toBe(true);
+          expect(chunksWithWikiLinks.length).toBeGreaterThan(0);
+          // Verify that extracted targets are non-empty strings
+          chunksWithWikiLinks.forEach(chunk => {
+            expect(chunk.metadata.wikiLinkTargets).toEqual(
+              expect.arrayContaining([expect.any(String)])
+            );
+          });
         }
 
         console.log(`Successfully processed ${relativeFile}: ${chunkResult.chunks.length} chunks`);

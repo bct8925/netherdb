@@ -41,8 +41,14 @@ export class SearchCommand {
       .option('--semantic', 'Force semantic (vector) search', false)
       .option('--keyword', 'Force keyword (text) search', false)
       .option('--browse', 'Browse all indexed documents', false)
-      .action((query: string, options: SearchOptions, command: Command) => 
-        this.handleSearch({ ...options, query }, command));
+      .action(async (query: string, options: SearchOptions, command: Command) => {
+        if (options.json) { this.logger.outputTarget = 'stderr'; }
+        try {
+          await this.handleSearch({ ...options, query }, command);
+        } finally {
+          this.logger.outputTarget = 'stdout';
+        }
+      });
 
   }
 

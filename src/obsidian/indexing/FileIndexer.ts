@@ -326,7 +326,7 @@ export class FileIndexer {
           hasCodeBlocks: chunk.metadata.hasCodeBlocks,
           hasTables: chunk.metadata.hasTables,
           hasCallouts: chunk.metadata.hasCallouts,
-          hasWikiLinks: chunk.metadata.hasWikiLinks,
+          wikiLinkTargets: chunk.metadata.wikiLinkTargets,
           
           // Custom fields
           ...chunk.metadata.custom,

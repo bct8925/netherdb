@@ -73,7 +73,6 @@ export class WikiLinkParser {
   parse(content: string): ParseResult {
     const wikiLinks: WikiLink[] = [];
     const tags: TagReference[] = [];
-    let processedContent = content;
 
     // Extract WikiLinks
     wikiLinks.push(...this.extractWikiLinks(content));
@@ -81,16 +80,10 @@ export class WikiLinkParser {
     // Extract tags
     tags.push(...this.extractTags(content));
 
-    // Replace WikiLinks with placeholders to avoid interfering with content processing
-    processedContent = this.replaceWikiLinksWithPlaceholders(processedContent, wikiLinks);
-
-    // Replace tags with placeholders
-    processedContent = this.replaceTagsWithPlaceholders(processedContent, tags);
-
     return {
       wikiLinks,
       tags,
-      processedContent,
+      processedContent: content,
     };
   }
 
@@ -328,8 +321,7 @@ export class WikiLinkParser {
   private normalizeTarget(target: string): string {
     return target
       .trim()
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .replace(/[<>:"/\\|?*]/g, '-'); // Replace invalid filename chars
+      .replace(/\s+/g, ' '); // Only normalize whitespace, preserve special chars like <> for type parameters
   }
 
   /**
@@ -371,76 +363,4 @@ export class WikiLinkParser {
     return inCodeBlock;
   }
 
-  /**
-   * Replace WikiLinks with placeholders
-   */
-  private replaceWikiLinksWithPlaceholders(content: string, links: WikiLink[]): string {
-    let result = content;
-    
-    // Sort links by position (descending) to avoid position shifts
-    const sortedLinks = [...links].sort((a, b) => b.position.start - a.position.start);
-
-    for (let i = 0; i < sortedLinks.length; i++) {
-      const link = sortedLinks[i];
-      if (!link) continue;
-      
-      const placeholder = `__WIKILINK_${i}__`;
-      
-      result = result.substring(0, link.position.start) + 
-               placeholder + 
-               result.substring(link.position.end);
-    }
-
-    return result;
-  }
-
-  /**
-   * Replace tags with placeholders
-   */
-  private replaceTagsWithPlaceholders(content: string, tags: TagReference[]): string {
-    let result = content;
-    
-    // Sort tags by position (descending) to avoid position shifts
-    const sortedTags = [...tags].sort((a, b) => b.position.start - a.position.start);
-
-    for (let i = 0; i < sortedTags.length; i++) {
-      const tag = sortedTags[i];
-      if (!tag) continue;
-      
-      const placeholder = `__TAG_${i}__`;
-      
-      result = result.substring(0, tag.position.start) + 
-               placeholder + 
-               result.substring(tag.position.end);
-    }
-
-    return result;
-  }
-
-  /**
-   * Restore WikiLinks and tags from placeholders
-   */
-  restoreFromPlaceholders(content: string, parseResult: ParseResult): string {
-    let result = content;
-
-    // Restore WikiLinks
-    for (let i = 0; i < parseResult.wikiLinks.length; i++) {
-      const placeholder = `__WIKILINK_${i}__`;
-      const link = parseResult.wikiLinks[i];
-      if (link) {
-        result = result.replace(placeholder, link.original);
-      }
-    }
-
-    // Restore tags
-    for (let i = 0; i < parseResult.tags.length; i++) {
-      const placeholder = `__TAG_${i}__`;
-      const tag = parseResult.tags[i];
-      if (tag) {
-        result = result.replace(placeholder, tag.original);
-      }
-    }
-
-    return result;
-  }
 }

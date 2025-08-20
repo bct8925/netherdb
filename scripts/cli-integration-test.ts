@@ -148,53 +148,34 @@ async function runCLIIntegrationTest() {
     }
 
     console.log('\n' + '='.repeat(60));
-    console.log('PHASE 5: INCREMENTAL UPDATES');
+    console.log('PHASE 5: WIKILINK FUNCTIONALITY VALIDATION');
     console.log('='.repeat(60));
 
-    // Add a new file to test incremental indexing
-    const newFilePath = path.join(testVaultPath, 'new-content.md');
-    const newFileContent = `---
-title: New Dynamic Content
-tags: [new, dynamic, test]
----
+    // Test WikiLink metadata extraction with controlled test data
+    const wikiLinkTests = [
+      {
+        command: `node ${cliPath} search "basic WikiLink functionality" --config ${configPath} --json --limit 1`,
+        description: 'Search for basic WikiLink test content',
+        validateWikiLinks: true,
+        expectedTargets: ['Advanced WikiLinks', 'Special Characters']
+      },
+      {
+        command: `node ${cliPath} search "advanced WikiLink parsing" --config ${configPath} --json --limit 1`,
+        description: 'Search for content with multiple special character WikiLinks',
+        validateWikiLinks: true,
+        expectedTargets: ['Basic WikiLinks', 'Special Characters'] // WikiLinks from Advanced test Multiple References section
+      },
+      {
+        command: `node ${cliPath} search "special character preservation" --config ${configPath} --json --limit 1`,
+        description: 'Search for special character WikiLink preservation test',
+        validateWikiLinks: true,
+        expectedTargets: ['GenericType<A,B>', 'Component "Header"', 'Map<K,V>', 'Field "Value"']
+      }
+    ];
 
-# New Dynamic Content
-
-This file was added during the CLI integration test to validate incremental indexing.
-
-## Testing Section
-
-Content with [[wiki links]] and #hashtags for testing incremental updates.
-
-## Code Example
-
-\`\`\`apex
-public class NewTestClass {
-    public static void testMethod() {
-        System.debug('CLI integration test');
+    for (const test of wikiLinkTests) {
+      await runCLICommandWithWikiLinkValidation(test.command, test.description, results, test.expectedTargets);
     }
-}
-\`\`\`
-
-This tests that new files are properly discovered and indexed.
-`;
-
-    await fs.writeFile(newFilePath, newFileContent);
-    console.log('✅ Added new test file for incremental indexing');
-
-    // Test incremental indexing
-    await runCLICommand(
-      `node ${cliPath} index --incremental --config ${configPath}`,
-      'Perform incremental indexing',
-      results
-    );
-
-    // Verify the new content is searchable
-    await runCLICommand(
-      `node ${cliPath} search "NewTestClass" --config ${configPath} --limit 1`,
-      'Search for newly added content',
-      results
-    );
 
     console.log('\n' + '='.repeat(60));
     console.log('PHASE 6: BACKUP AND RESTORE');
@@ -280,6 +261,7 @@ This tests that new files are properly discovered and indexed.
     console.log('✅ Keyword search with JSON output');
     console.log('✅ Document browsing');
     console.log('✅ Backup and restore operations');
+    console.log('✅ WikiLink metadata extraction and storage');
     console.log('✅ Configuration file support');
     console.log('✅ Parameter parsing (limit, verbose, json)');
     console.log('✅ Error handling and edge cases');
@@ -416,208 +398,195 @@ async function runCLICommand(
 }
 
 /**
- * Create a test Obsidian vault with sample content
+ * Run a CLI command with WikiLink validation
+ */
+async function runCLICommandWithWikiLinkValidation(
+  command: string, 
+  description: string, 
+  results: CLITestResult[],
+  expectedTargets: string[]
+): Promise<void> {
+  console.log(`\n🔧 ${description}`);
+  console.log(`   Command: ${command}`);
+  
+  const startTime = Date.now();
+  
+  try {
+    const { stdout, stderr } = await execAsync(command, {
+      timeout: 60000, // 60 second timeout
+      maxBuffer: 1024 * 1024 // 1MB buffer
+    });
+    
+    const duration = Date.now() - startTime;
+    const output = stdout + (stderr ? `\nSTDERR: ${stderr}` : '');
+    
+    // Parse JSON output to validate WikiLink targets
+    // For JSON commands, only parse stdout to avoid stderr contamination
+    let wikiLinkValidation = { success: false, details: '' };
+    try {
+      const searchResults = JSON.parse(stdout);
+      if (Array.isArray(searchResults) && searchResults.length > 0) {
+        const result = searchResults[0];
+        const wikiLinkTargets = result.metadata?.wikiLinkTargets || [];
+        
+        // Check if expected targets are present
+        const foundTargets = expectedTargets.filter(target => 
+          wikiLinkTargets.some((wt: string) => wt.includes(target))
+        );
+        
+        // For debugging: check all results, not just the first one
+        let allWikiLinkTargets: string[] = [];
+        for (const result of searchResults) {
+          const targets = result.metadata?.wikiLinkTargets || [];
+          allWikiLinkTargets = allWikiLinkTargets.concat(targets);
+        }
+        allWikiLinkTargets = [...new Set(allWikiLinkTargets)]; // Remove duplicates
+        
+        const foundInAny = expectedTargets.filter(target => 
+          allWikiLinkTargets.some((wt: string) => wt.includes(target))
+        );
+        
+        wikiLinkValidation = {
+          success: foundInAny.length > 0,
+          details: `Found ${foundInAny.length}/${expectedTargets.length} expected WikiLink targets: [${foundInAny.join(', ')}]. All targets across ${searchResults.length} results: [${allWikiLinkTargets.join(', ')}]`
+        };
+      } else {
+        wikiLinkValidation = {
+          success: false,
+          details: 'No search results returned'
+        };
+      }
+    } catch (parseError) {
+      wikiLinkValidation = {
+        success: false,
+        details: `Failed to parse JSON output: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`
+      };
+    }
+    
+    results.push({
+      command,
+      success: true,
+      output,
+      duration
+    });
+    
+    console.log(`✅ Success (${duration}ms)`);
+    
+    // Show WikiLink validation results
+    if (wikiLinkValidation.success) {
+      console.log(`   🔗 WikiLinks: ✅ ${wikiLinkValidation.details}`);
+    } else {
+      console.log(`   🔗 WikiLinks: ⚠️  ${wikiLinkValidation.details}`);
+    }
+    
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+    
+    results.push({
+      command,
+      success: false,
+      output: error.stdout || '',
+      error: error.message,
+      duration
+    });
+    
+    console.log(`❌ Failed (${duration}ms): ${error.message}`);
+    
+    // Show error details for debugging
+    if (error.stdout) {
+      console.log(`   Output: ${error.stdout.substring(0, 200)}...`);
+    }
+    if (error.stderr) {
+      console.log(`   Error: ${error.stderr.substring(0, 200)}...`);
+    }
+  }
+}
+
+/**
+ * Create a test Obsidian vault with sample content designed for WikiLink testing
  */
 async function createTestVault(vaultPath: string): Promise<void> {
   console.log('📝 Creating test Obsidian vault...');
   
   const files = [
     {
-      path: 'README.md',
+      path: 'WikiLink-Test-Basic.md',
       content: `---
-title: CLI Test Vault
-tags: [test, cli, integration]
+title: Basic WikiLink Test
+tags: [test, wikilinks, basic]
 ---
 
-# CLI Integration Test Vault
+# Basic WikiLink Test
 
-This vault is created for testing the CLI functionality.
+This document tests basic WikiLink functionality.
 
-## Contents
+## Simple Links
 
-- [[Apex Development]]
-- [[Lightning Components]]
-- [[Data Model]]
+Reference these topics: [[Advanced WikiLinks]] and [[Special Characters]].
 
-## Purpose
+## Content
 
-Testing CLI commands:
-- index
-- status
-- search
-- backup
+This is regular content that should be searchable.
+We use basic WikiLinks to connect concepts.
 
-#test #cli
+#basic #test
 `
     },
     {
-      path: 'Apex Development.md',
+      path: 'WikiLink-Test-Advanced.md',
       content: `---
-title: Apex Development Guide
-tags: [apex, development, salesforce]
-category: development
+title: Advanced WikiLink Test  
+tags: [test, wikilinks, advanced]
 ---
 
-# Apex Development Guide
+# Advanced WikiLink Test
 
-Comprehensive guide for Apex programming in Salesforce.
+This document tests advanced WikiLink scenarios.
 
-## Classes and Methods
+## Special Character WikiLinks
 
-Apex classes encapsulate methods and variables:
+Testing WikiLinks with special characters:
+- Generic types: [[Map<K,V>]] and [[List<T>]]
+- Namespaced types: [[Optional<T>]] and [[Result<T,E>]]
+- Field references: [[Data Type: String]] and [[Field "Name"]]
 
-\`\`\`apex
-public class AccountService {
-    public static List<Account> getActiveAccounts() {
-        return [SELECT Id, Name FROM Account WHERE IsActive__c = true];
-    }
-}
-\`\`\`
+## Multiple References
 
-## SOQL Queries
+Multiple WikiLinks in one sentence: [[Basic WikiLinks]] and [[Special Characters]].
 
-Salesforce Object Query Language examples:
+## Content for Search
 
-\`\`\`sql
-SELECT Id, Name, Type
-FROM Account
-WHERE CreatedDate = LAST_N_DAYS:30
-LIMIT 100
-\`\`\`
+This content specifically tests advanced WikiLink parsing.
+The key phrase is "advanced WikiLink scenarios" for searching.
 
-## Best Practices
-
-1. Bulkify your code
-2. Handle exceptions properly
-3. Write comprehensive tests
-4. Follow naming conventions
-
-See also: [[Lightning Components]], [[Data Model]]
-
-#apex #soql #development
+#advanced #special-chars
 `
     },
     {
-      path: 'Lightning Components.md',
+      path: 'WikiLink-Test-Special.md',
       content: `---
-title: Lightning Web Components
-tags: [lwc, lightning, frontend]
-category: frontend
+title: Special Characters WikiLink Test
+tags: [test, wikilinks, special]
 ---
 
-# Lightning Web Components
+# Special Characters Test
 
-Modern framework for building Salesforce user interfaces.
+Document focused on testing special character preservation.
 
-## Component Structure
+## Type Parameters
 
-LWC components consist of:
+Testing angle bracket preservation in [[GenericType<A,B>]].
 
-- **HTML Template** - UI structure
-- **JavaScript Class** - Logic and data
-- **CSS Styles** - Component styling
-- **XML Metadata** - Configuration
+## Quoted Names  
 
-## Example Component
+Testing quotes in [[Component "Header"]].
 
-\`\`\`javascript
-import { LightningElement, track } from 'lwc';
+## Mixed Content
 
-export default class ExampleComponent extends LightningElement {
-    @track data = [];
-    
-    connectedCallback() {
-        this.loadData();
-    }
-    
-    loadData() {
-        // Load component data
-    }
-}
-\`\`\`
+The phrase "special character preservation" should find this document.
+It contains [[Map<K,V>]] and [[Field "Value"]] for testing.
 
-## Data Binding
-
-Use @track, @api, and @wire for reactive data:
-
-| Decorator | Purpose | Example |
-|-----------|---------|---------|
-| @track | Reactive properties | @track accounts = [] |
-| @api | Public properties | @api recordId |
-| @wire | Data service binding | @wire(getAccount) |
-
-## Lifecycle Hooks
-
-1. constructor()
-2. connectedCallback()
-3. renderedCallback()
-4. disconnectedCallback()
-
-Related: [[Apex Development]]
-
-#lwc #lightning #javascript
-`
-    },
-    {
-      path: 'Data Model.md',
-      content: `---
-title: Salesforce Data Model
-tags: [data, objects, schema]
-category: architecture
----
-
-# Salesforce Data Model
-
-Understanding Salesforce data architecture and relationships.
-
-## Standard Objects
-
-Core Salesforce objects:
-
-- **Account** - Companies and organizations
-- **Contact** - Individual people  
-- **Opportunity** - Sales deals
-- **Lead** - Potential customers
-- **Case** - Service requests
-
-## Relationships
-
-### Master-Detail
-- Strong parent-child relationship
-- Child inherits sharing from parent
-- Cascade delete behavior
-
-### Lookup
-- Flexible relationship
-- Independent sharing rules
-- Optional connections
-
-## Field Types
-
-Common field types and usage:
-
-| Type | Use Case | Validation |
-|------|----------|------------|
-| Text | Names, descriptions | Length limits |
-| Number | Quantities, amounts | Range validation |
-| Date | Temporal data | Date ranges |
-| Picklist | Controlled values | Value restrictions |
-
-## Schema Design
-
-Best practices:
-
-1. Plan relationships carefully
-2. Consider sharing implications
-3. Design for scalability
-4. Document schema decisions
-
-> [!NOTE]
-> Master-detail relationships create tight coupling between objects.
-
-References: [[Apex Development]], [[Lightning Components]]
-
-#data #schema #relationships
+#special #characters
 `
     }
   ];

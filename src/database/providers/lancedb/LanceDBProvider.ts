@@ -62,13 +62,13 @@ export class LanceDBProvider implements VectorDatabase {
               totalChunks: 1,
               lastModified: new Date().toISOString(),
               section: 'Sample Section',
-              headers: ['Sample Header'],
+              headers: ['Sample Header', 'Sample Subheader'],
               chunkType: 'paragraph',
               tokens: 10,
               hasCodeBlocks: false,
               hasTables: false,
               hasCallouts: false,
-              hasWikiLinks: false,
+              wikiLinkTargets: ['sample-target'],
             },
           },
         ];
@@ -387,9 +387,12 @@ export class LanceDBProvider implements VectorDatabase {
         parsed.lastModified = new Date(parsed.lastModified);
       }
       
-      // Convert Arrow Vector objects to plain arrays
-      if (parsed.tags && typeof parsed.tags === 'object' && parsed.tags !== null && 'length' in parsed.tags) {
-        parsed.tags = Array.from(parsed.tags as ArrayLike<unknown>);
+      // Convert Arrow Vector objects to plain arrays for all known array fields
+      const arrayFields = ['tags', 'wikiLinkTargets', 'headers'];
+      for (const field of arrayFields) {
+        if (parsed[field] && typeof parsed[field] === 'object' && parsed[field] !== null && 'length' in (parsed[field] as object)) {
+          parsed[field] = Array.from(parsed[field] as ArrayLike<unknown>);
+        }
       }
       
       return parsed as Metadata;

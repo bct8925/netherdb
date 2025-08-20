@@ -54,7 +54,11 @@ export class StatusCommand {
       .option('--db-path <path>', 'Path to vector database directory')
       .option('--verbose', 'Show detailed information')
       .option('--json', 'Output status as JSON')
-      .action((options: StatusOptions, command: Command) => this.handleStatus(options, command));
+      .action((options: StatusOptions, command: Command) => {
+        if (options.json) { this.logger.outputTarget = 'stderr'; }
+        this.handleStatus(options, command);
+        this.logger.outputTarget = 'stdout';
+      });
   }
 
   private async handleStatus(options: StatusOptions, command: Command): Promise<void> {

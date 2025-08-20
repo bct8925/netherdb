@@ -330,7 +330,7 @@ export class HeaderBasedChunker extends ChunkingStrategy {
     const chunkType = this.detectChunkType(content);
     const tokens = this.estimateTokenCount(content);
 
-    const metadata = this.createChunkMetadata(content, chunkType, {
+    const metadata = this.createChunkMetadata(content, chunkType, document, {
       ...(document.metadata.title && { title: document.metadata.title }),
       ...(document.metadata.author && { author: document.metadata.author }),
       tags: document.tags,

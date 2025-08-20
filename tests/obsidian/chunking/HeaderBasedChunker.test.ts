@@ -485,6 +485,117 @@ This is paragraph three with even more content. This final paragraph adds additi
         expect(chunk.headers).toEqual([]);
       }
     });
+
+    it('should extract WikiLink targets in chunk metadata', async () => {
+      const content = `# Generic Types
+
+Reference [[Map<K,V>]] and [[List<T>]] for collections.
+Also see [[Data Type: String]] for text handling.
+
+## Advanced Types
+
+Check [[Optional<T>]] and [[Result<T,E>]] patterns.`;
+
+      const wikiLinks = [
+        { original: '[[Map<K,V>]]', target: 'Map<K,V>', position: { start: 10, end: 22 }, isEmbed: false },
+        { original: '[[List<T>]]', target: 'List<T>', position: { start: 27, end: 38 }, isEmbed: false },
+        { original: '[[Data Type: String]]', target: 'Data Type: String', position: { start: 55, end: 76 }, isEmbed: false },
+        { original: '[[Optional<T>]]', target: 'Optional<T>', position: { start: 105, end: 120 }, isEmbed: false },
+        { original: '[[Result<T,E>]]', target: 'Result<T,E>', position: { start: 125, end: 140 }, isEmbed: false },
+      ];
+
+      const document: TestParsedDocument = {
+        raw: content,
+        content: content,
+        frontmatter: {},
+        hasFrontmatter: false,
+        wikiLinks: wikiLinks,
+        tags: [],
+        tagReferences: [],
+        processedContent: content,
+        html: '',
+        plainText: content,
+        metadata: {
+          tags: [],
+          wordCount: 50,
+          readingTime: 1,
+          links: [],
+          headings: [
+            { level: 1, text: 'Generic Types', anchor: 'generic-types', position: 0 },
+            { level: 2, text: 'Advanced Types', anchor: 'advanced-types', position: 100 },
+          ],
+          isHidden: false,
+          custom: {},
+        },
+      };
+
+      const result = await chunker.chunk(document as any, 'types.md');
+
+      expect(result.chunks.length).toBeGreaterThan(0);
+      
+      // Find chunks with WikiLinks
+      const chunksWithWikiLinks = result.chunks.filter(chunk => 
+        chunk.metadata.wikiLinkTargets && chunk.metadata.wikiLinkTargets.length > 0
+      );
+      
+      expect(chunksWithWikiLinks.length).toBeGreaterThan(0);
+      
+      // Check that WikiLink targets are preserved with special characters
+      const allTargets = chunksWithWikiLinks.flatMap(chunk => chunk.metadata.wikiLinkTargets);
+      
+      // Should contain at least some of our special character WikiLinks
+      expect(allTargets.some(target => target.includes('<') && target.includes('>'))).toBe(true);
+      
+      // Specifically check for angle bracket preservation
+      const angleTargets = allTargets.filter(target => target.includes('<') && target.includes('>'));
+      expect(angleTargets.length).toBeGreaterThan(0);
+      
+      // Ensure no targets were corrupted (no dashes replacing special chars)
+      allTargets.forEach(target => {
+        expect(target).not.toMatch(/-K,V-/);
+        expect(target).not.toMatch(/-T-/);
+        expect(target).not.toMatch(/- /);
+      });
+    });
+
+    it('should handle empty WikiLink arrays', async () => {
+      const content = `# Regular Content
+
+Just regular text without any WikiLinks.`;
+
+      const document: TestParsedDocument = {
+        raw: content,
+        content: content,
+        frontmatter: {},
+        hasFrontmatter: false,
+        wikiLinks: [], // No WikiLinks
+        tags: [],
+        tagReferences: [],
+        processedContent: content,
+        html: '',
+        plainText: content,
+        metadata: {
+          tags: [],
+          wordCount: 20,
+          readingTime: 1,
+          links: [],
+          headings: [
+            { level: 1, text: 'Regular Content', anchor: 'regular-content', position: 0 },
+          ],
+          isHidden: false,
+          custom: {},
+        },
+      };
+
+      const result = await chunker.chunk(document as any, 'regular.md');
+
+      expect(result.chunks.length).toBeGreaterThan(0);
+      
+      // All chunks should have empty wikiLinkTargets arrays
+      result.chunks.forEach(chunk => {
+        expect(chunk.metadata.wikiLinkTargets).toEqual([]);
+      });
+    });
   });
 
   describe('token estimation', () => {

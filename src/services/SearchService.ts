@@ -23,6 +23,11 @@ export interface FormattedSearchResult {
     totalChunks?: number;
     category?: string;
     source?: string;
+    wikiLinkTargets?: string[];
+    hasCodeBlocks?: boolean;
+    hasTables?: boolean;
+    hasCallouts?: boolean;
+    [key: string]: unknown;
   };
   score: number;
   distance: number;
@@ -222,6 +227,18 @@ export class SearchService {
             }),
             ...(result.metadata?.category !== undefined && { category: result.metadata.category }),
             ...(result.metadata?.source !== undefined && { source: result.metadata.source }),
+            wikiLinkTargets: Array.isArray(result.metadata?.wikiLinkTargets)
+              ? result.metadata.wikiLinkTargets
+              : [],
+            ...(typeof result.metadata?.hasCodeBlocks === 'boolean' && {
+              hasCodeBlocks: result.metadata.hasCodeBlocks,
+            }),
+            ...(typeof result.metadata?.hasTables === 'boolean' && {
+              hasTables: result.metadata.hasTables,
+            }),
+            ...(typeof result.metadata?.hasCallouts === 'boolean' && {
+              hasCallouts: result.metadata.hasCallouts,
+            }),
           },
           score: result.score || 0,
           distance: result.distance || 1,

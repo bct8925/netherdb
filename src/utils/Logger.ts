@@ -3,9 +3,11 @@
  */
 export class Logger {
   private readonly context: string;
+  public outputTarget: 'stdout' | 'stderr';
 
-  constructor(context: string = 'App') {
+  constructor(context: string = 'App', options?: { outputTarget?: 'stdout' | 'stderr' }) {
     this.context = context;
+    this.outputTarget = options?.outputTarget || 'stdout';
   }
 
   /**
@@ -13,7 +15,8 @@ export class Logger {
    */
   debug(message: string, ...args: unknown[]): void {
     if (process.env.NODE_ENV !== 'test') {
-      console.debug(`[DEBUG] [${this.context}] ${message}`, ...args);
+      const output = this.outputTarget === 'stderr' ? console.error : console.debug;
+      output(`[DEBUG] [${this.context}] ${message}`, ...args);
     }
   }
 
@@ -22,7 +25,8 @@ export class Logger {
    */
   info(message: string, ...args: unknown[]): void {
     if (process.env.NODE_ENV !== 'test') {
-      console.info(`[INFO] [${this.context}] ${message}`, ...args);
+      const output = this.outputTarget === 'stderr' ? console.error : console.info;
+      output(`[INFO] [${this.context}] ${message}`, ...args);
     }
   }
 
@@ -31,7 +35,8 @@ export class Logger {
    */
   warn(message: string, ...args: unknown[]): void {
     if (process.env.NODE_ENV !== 'test') {
-      console.warn(`[WARN] [${this.context}] ${message}`, ...args);
+      const output = this.outputTarget === 'stderr' ? console.error : console.warn;
+      output(`[WARN] [${this.context}] ${message}`, ...args);
     }
   }
 
@@ -48,6 +53,6 @@ export class Logger {
    * Create child logger with additional context
    */
   child(childContext: string): Logger {
-    return new Logger(`${this.context}:${childContext}`);
+    return new Logger(`${this.context}:${childContext}`, { outputTarget: this.outputTarget });
   }
 }

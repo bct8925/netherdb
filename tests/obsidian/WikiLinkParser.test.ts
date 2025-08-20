@@ -123,6 +123,49 @@ Also see [[Other Note#Section|Link Text]] for more info.
       expect(links[2]!.target).toBe('Other Note');
       expect(links[2]!.anchor).toBe('Section');
     });
+
+    it('should preserve special characters in WikiLink targets', () => {
+      const content = `
+Reference [[Map<K,V>]] and [[List<T>]] for generic types.
+Also see [[Data Type: String]] and [[Field "Name"]] with special chars.
+Check [[Path/To/File]] and [[User@domain.com]] formats.
+`;
+
+      const links = parser.extractWikiLinks(content);
+
+      expect(links).toHaveLength(6);
+      
+      // Test angle brackets are preserved (not converted to dashes)
+      expect(links[0]).toEqual({
+        original: '[[Map<K,V>]]',
+        target: 'Map<K,V>',
+        displayText: undefined,
+        anchor: undefined,
+        position: expect.any(Object),
+        isEmbed: false,
+      });
+      
+      expect(links[1]).toEqual({
+        original: '[[List<T>]]',
+        target: 'List<T>',
+        displayText: undefined,
+        anchor: undefined,
+        position: expect.any(Object),
+        isEmbed: false,
+      });
+      
+      // Test colon is preserved
+      expect(links[2]!.target).toBe('Data Type: String');
+      
+      // Test quotes are preserved
+      expect(links[3]!.target).toBe('Field "Name"');
+      
+      // Test slashes are preserved
+      expect(links[4]!.target).toBe('Path/To/File');
+      
+      // Test @ symbol is preserved
+      expect(links[5]!.target).toBe('User@domain.com');
+    });
   });
 
   describe('extractTags', () => {
@@ -225,8 +268,10 @@ See [[Note|Link Text]] for details.`;
 
       expect(result.wikiLinks).toHaveLength(3);
       expect(result.tags).toHaveLength(2);
-      expect(result.processedContent).toContain('__WIKILINK_');
-      expect(result.processedContent).toContain('__TAG_');
+      // processedContent should now be the same as original content (no placeholders)
+      expect(result.processedContent).toBe(content);
+      expect(result.processedContent).toContain('[[Other Note]]');
+      expect(result.processedContent).toContain('#tags');
     });
 
     it('should handle empty content', () => {
@@ -334,31 +379,4 @@ See [[Note|Link Text]] for details.`;
     });
   });
 
-  describe('restoreFromPlaceholders', () => {
-    it.skip('should restore original content from placeholders', () => {
-      const originalContent = 'Text with [[WikiLink]] and #tag.';
-      const parseResult = parser.parse(originalContent);
-      
-      const restored = parser.restoreFromPlaceholders(parseResult.processedContent, parseResult);
-
-      expect(restored).toBe(originalContent);
-    });
-
-    it.skip('should handle complex content with multiple replacements', () => {
-      const originalContent = `
-# Header
-
-Link to [[Note A]] and [[Note B|Display B]].
-
-Tags: #tag1 #nested/tag2
-
-Embed: ![[image.png]]
-`;
-
-      const parseResult = parser.parse(originalContent);
-      const restored = parser.restoreFromPlaceholders(parseResult.processedContent, parseResult);
-
-      expect(restored).toBe(originalContent);
-    });
-  });
 });
