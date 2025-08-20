@@ -188,26 +188,26 @@ export class IncrementalIndexer {
     // Group changes by type for efficient processing
     const changesByType = this.groupChangesByType(changes);
 
-    // Process deletions first
-    if (changesByType.deleted.length > 0) {
-      this.logger.debug(`Processing ${changesByType.deleted.length} deletions`);
+    // TODO: Process deletions first
+    // if (changesByType.deleted.length > 0) {
+    //   this.logger.debug(`Processing ${changesByType.deleted.length} deletions`);
       
-      for (const change of changesByType.deleted) {
-        try {
-          await this.handleFileDeletion(change.path);
-          changesSummary.deleted++;
-        } catch (error) {
-          this.logger.error(`Error deleting file ${change.path}:`, error);
-          if (!this.config.skipErrorFiles) throw error;
-          errors.push({
-            file: change.path,
-            error: error instanceof Error ? error.message : String(error),
-            stage: 'storage',
-            timestamp: new Date(),
-          });
-        }
-      }
-    }
+    //   for (const change of changesByType.deleted) {
+    //     try {
+    //       await this.handleFileDeletion(change.path);
+    //       changesSummary.deleted++;
+    //     } catch (error) {
+    //       this.logger.error(`Error deleting file ${change.path}:`, error);
+    //       if (!this.config.skipErrorFiles) throw error;
+    //       errors.push({
+    //         file: change.path,
+    //         error: error instanceof Error ? error.message : String(error),
+    //         stage: 'storage',
+    //         timestamp: new Date(),
+    //       });
+    //     }
+    //   }
+    // }
 
     // Process renames/moves
     if (changesByType.renamed.length > 0 && this.config.handleRenames) {
@@ -279,41 +279,42 @@ export class IncrementalIndexer {
     };
   }
 
+  // TODO: Implement deletion logic based on metadata
   /**
    * Handle file deletion from vector database
    */
-  private async handleFileDeletion(filePath: string): Promise<void> {
-    this.logger.debug(`Deleting chunks for file: ${filePath}`);
+  // private async handleFileDeletion(_filePath: string): Promise<void> {
+    // this.logger.debug(`Deleting chunks for file: ${filePath}`);
 
-    try {
-      // Query for chunks from this file
-      const existingChunks = await this.vectorDb.query('', {
-        limit: 1000,
-        includeMetadata: true,
-      });
+    // try {
+    //   // Query for chunks from this file
+    //   const existingChunks = await this.vectorDb.query(undefined, {
+    //     limit: 1000,
+    //     includeMetadata: true,
+    //   });
 
-      const chunksToDelete = existingChunks.results
-        .filter(result => result.metadata.filePath === filePath)
-        .map(result => result.id);
+    //   const chunksToDelete = existingChunks.results
+    //     .filter(result => result.metadata.filePath === filePath)
+    //     .map(result => result.id);
 
-      if (chunksToDelete.length > 0) {
-        // Delete in batches if needed
-        const batchSize = this.config.batchDeleteSize || 50;
+    //   if (chunksToDelete.length > 0) {
+    //     // Delete in batches if needed
+    //     const batchSize = this.config.batchDeleteSize || 50;
         
-        for (let i = 0; i < chunksToDelete.length; i += batchSize) {
-          const batch = chunksToDelete.slice(i, i + batchSize);
-          await this.vectorDb.delete(batch);
-        }
+    //     for (let i = 0; i < chunksToDelete.length; i += batchSize) {
+    //       const batch = chunksToDelete.slice(i, i + batchSize);
+    //       await this.vectorDb.delete(batch);
+    //     }
 
-        this.logger.debug(
-          `Deleted ${chunksToDelete.length} chunks for file: ${filePath}`
-        );
-      }
-    } catch (error) {
-      this.logger.error(`Error deleting chunks for ${filePath}:`, error);
-      throw error;
-    }
-  }
+    //     this.logger.debug(
+    //       `Deleted ${chunksToDelete.length} chunks for file: ${filePath}`
+    //     );
+    //   }
+    // } catch (error) {
+    //   this.logger.error(`Error deleting chunks for ${filePath}:`, error);
+    //   throw error;
+    // }
+  // }
 
   /**
    * Handle file rename/move operations
@@ -325,8 +326,8 @@ export class IncrementalIndexer {
     if (change.oldPath) {
       this.logger.debug(`Handling rename: ${change.oldPath} -> ${change.path}`);
       
-      // Delete old chunks
-      await this.handleFileDeletion(change.oldPath);
+      // TODO: Delete old chunks
+      // await this.handleFileDeletion(change.oldPath);
       
       // The new file will be indexed as an "added" file
       this.logger.debug(`Rename handled, new file will be indexed: ${change.path}`);

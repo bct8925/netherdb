@@ -40,7 +40,7 @@ export class SearchCommand {
       .option('-v, --verbose', 'Show detailed search information')
       .option('--semantic', 'Force semantic (vector) search', false)
       .option('--keyword', 'Force keyword (text) search', false)
-      .option('--browse', 'Browse all indexed documents', false)
+      // .option('--browse', 'Browse all indexed documents', false)
       .action(async (query: string, options: SearchOptions, command: Command) => {
         if (options.json) { this.logger.outputTarget = 'stderr'; }
         try {
@@ -54,10 +54,11 @@ export class SearchCommand {
 
   private async handleSearch(options: SearchOptions, command: Command): Promise<void> {
     try {
-      // Handle browse mode
-      if (options.browse) {
-        return this.handleBrowse(options, command);
-      }
+      // TODO: Implement browse functionality
+      // if (options.browse) {
+      //   console.error('❌ Browse is not implemented yet.');
+      //   process.exit(1);
+      // }
 
       if (!options.query) {
         console.error('❌ Search query is required');
@@ -91,30 +92,31 @@ export class SearchCommand {
     }
   }
 
-  private async handleBrowse(options: SearchOptions, command: Command): Promise<void> {
-    try {
-      this.logger.info('Starting browse operation', { options });
+  // TODO: Implement browse functionality
+  // private async handleBrowse(_options: SearchOptions, _command: Command): Promise<void> {
+    // try {
+    //   this.logger.info('Starting browse operation', { options });
 
-      // Load configuration and initialize components
-      const { searchService } = await this.initializeComponents(options, command);
+    //   // Load configuration and initialize components
+    //   const { searchService } = await this.initializeComponents(options, command);
 
-      // Get all documents
-      const limit = options.limit ? parseInt(String(options.limit)) : 20;
-      const displayResults = await searchService.browse(limit);
+    //   // Get all documents
+    //   const limit = options.limit ? parseInt(String(options.limit)) : 20;
+    //   const displayResults = await searchService.browse(limit);
 
-      // Display results
-      if (options.json) {
-        console.log(JSON.stringify(displayResults, null, 2));
-      } else {
-        this.displayBrowseResults(displayResults, options.verbose || false);
-      }
+    //   // Display results
+    //   if (options.json) {
+    //     console.log(JSON.stringify(displayResults, null, 2));
+    //   } else {
+    //     this.displayBrowseResults(displayResults, options.verbose || false);
+    //   }
 
-    } catch (error) {
-      this.logger.error('Browse operation failed', { error });
-      console.error('❌ Browse failed:', error instanceof Error ? error.message : String(error));
-      process.exit(1);
-    }
-  }
+    // } catch (error) {
+    //   this.logger.error('Browse operation failed', { error });
+    //   console.error('❌ Browse failed:', error instanceof Error ? error.message : String(error));
+    //   process.exit(1);
+    // }
+  // }
 
   private async initializeComponents(options: SearchOptions, command: Command) {
     // Load configuration with global support

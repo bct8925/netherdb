@@ -2,12 +2,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { VectorDatabase } from '../../database/interfaces/VectorDatabase';
 import type { Logger } from '../../utils/Logger';
 
-function createPreview(content: string, maxLength: number = 150): string {
-  const cleaned = content.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-  if (cleaned.length <= maxLength) return cleaned;
-  return cleaned.substring(0, maxLength) + '...';
-}
-
 export function setupResources(
   server: McpServer,
   db: VectorDatabase,
@@ -48,61 +42,62 @@ export function setupResources(
     }
   );
 
-  server.registerResource(
-    'knowledge-base-documents',
-    'obsidian://knowledge-base/documents',
-    {
-      name: 'All Documents',
-      description: 'List of all documents in the knowledge base',
-      mimeType: 'application/json',
-    },
-    async () => {
-      try {
-        // Get document count and sample from database
-        const stats = await db.getStats();
-        const sampleDocuments = await db.query('', {
-          limit: 20,
-          includeMetadata: true,
-        });
+  // TODO: Re-enable when query by metadata is supported in all DB providers
+  // server.registerResource(
+  //   'knowledge-base-documents',
+  //   'obsidian://knowledge-base/documents',
+  //   {
+  //     name: 'All Documents',
+  //     description: 'List of all documents in the knowledge base',
+  //     mimeType: 'application/json',
+  //   },
+  //   async () => {
+  //     try {
+  //       // Get document count and sample from database
+  //       const stats = await db.getStats();
+  //       const sampleDocuments = await db.query(undefined, {
+  //         limit: 20,
+  //         includeMetadata: true,
+  //       });
 
-        const documents = {
-          total: stats.totalVectors,
-          sampleCount: sampleDocuments.results.length,
-          documents: sampleDocuments.results.map((doc) => ({
-            id: doc.id,
-            filePath: doc.metadata.filePath,
-            title: doc.metadata.title,
-            tags: doc.metadata.tags || [],
-            lastModified:
-              doc.metadata.lastModified instanceof Date
-                ? doc.metadata.lastModified.toISOString()
-                : doc.metadata.lastModified || new Date().toISOString(),
-            preview: createPreview(doc.content, 100),
-          })),
-        };
-        return {
-          contents: [
-            {
-              uri: 'obsidian://knowledge-base/documents',
-              text: JSON.stringify(documents, null, 2),
-              mimeType: 'application/json',
-            },
-          ],
-        };
-      } catch (error) {
-        logger.error('Failed to list documents:', error);
-        return {
-          contents: [
-            {
-              uri: 'obsidian://knowledge-base/documents',
-              text: JSON.stringify({ error: 'Failed to list documents' }, null, 2),
-              mimeType: 'application/json',
-            },
-          ],
-        };
-      }
-    }
-  );
+  //       const documents = {
+  //         total: stats.totalVectors,
+  //         sampleCount: sampleDocuments.results.length,
+  //         documents: sampleDocuments.results.map((doc) => ({
+  //           id: doc.id,
+  //           filePath: doc.metadata.filePath,
+  //           title: doc.metadata.title,
+  //           tags: doc.metadata.tags || [],
+  //           lastModified:
+  //             doc.metadata.lastModified instanceof Date
+  //               ? doc.metadata.lastModified.toISOString()
+  //               : doc.metadata.lastModified || new Date().toISOString(),
+  //           preview: createPreview(doc.content, 100),
+  //         })),
+  //       };
+  //       return {
+  //         contents: [
+  //           {
+  //             uri: 'obsidian://knowledge-base/documents',
+  //             text: JSON.stringify(documents, null, 2),
+  //             mimeType: 'application/json',
+  //           },
+  //         ],
+  //       };
+  //     } catch (error) {
+  //       logger.error('Failed to list documents:', error);
+  //       return {
+  //         contents: [
+  //           {
+  //             uri: 'obsidian://knowledge-base/documents',
+  //             text: JSON.stringify({ error: 'Failed to list documents' }, null, 2),
+  //             mimeType: 'application/json',
+  //           },
+  //         ],
+  //       };
+  //     }
+  //   }
+  // );
 
   server.registerResource(
     'knowledge-base-indices',

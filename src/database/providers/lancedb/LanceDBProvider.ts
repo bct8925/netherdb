@@ -400,50 +400,13 @@ export class LanceDBProvider implements VectorDatabase {
     return metadata as Metadata;
   }
 
-  /**
-   * Query records with text and optional filters
-   */
-  async query(queryText: string, options?: { limit?: number; includeMetadata?: boolean }): Promise<{ results: SearchResult[] }> {
-    if (!this.table) {
-      throw new Error('Database not initialized. Call initialize() first.');
-    }
-
-    try {
-      const limit = options?.limit || 10;
-      
-      // For empty query text, just get all records
-      let results;
-      if (!queryText || queryText.trim() === '') {
-        // Get all records by using a zero vector search with high limit
-        const mockVector = new Array(384).fill(0);
-        results = await this.table.search(mockVector).limit(limit).toArray();
-      } else {
-        // Use a mock vector for text query (in real implementation, would embed the text)
-        const mockVector = new Array(384).fill(0);
-        results = await this.table.search(mockVector).limit(limit).toArray();
-      }
-
-      return {
-        results: results.map((result: LanceDBSearchResult) => {
-          const distance = result._distance || 0;
-          const rawScore = result._score;
-          
-          // Convert distance to score if no score is provided
-          const score = rawScore !== undefined ? rawScore : distanceToScore(distance);
-          
-          return {
-            id: String(result.id),
-            content: String(result.content),
-            metadata: this.parseMetadataDates(result.metadata),
-            score,
-            distance,
-          };
-        }),
-      };
-    } catch (error) {
-      throw new Error(`Failed to query records: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
+  // TODO: Implement these methods in the concrete database providers
+  // /**
+  //  * Query records with text and optional filters
+  //  */
+  // async query(_queryText: string, _options?: { limit?: number; includeMetadata?: boolean }): Promise<{ results: SearchResult[] }> {
+  //   throw new Error('Query method not implemented for LanceDBProvider. Use search instead.');
+  // }
 
   async databaseExists(): Promise<boolean> {
     // First check if the database directory exists at all

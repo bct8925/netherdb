@@ -106,13 +106,14 @@ export interface VectorDatabase {
    */
   getById(id: string): Promise<VectorData | null>;
 
-  /**
-   * Query records with text and optional filters
-   * @param queryText Text query (can be empty for metadata-only queries)
-   * @param options Query options
-   * @returns Query results
-   */
-  query(queryText: string, options?: { limit?: number; includeMetadata?: boolean }): Promise<{ results: SearchResult[] }>;
+  // TODO: Implement these methods in the concrete database providers
+  // /**
+  //  * Query records with text and optional filters
+  //  * @param queryText Text query (can be empty for metadata-only queries)
+  //  * @param options Query options
+  //  * @returns Query results
+  //  */
+  // query(queryText: string, options?: { limit?: number; includeMetadata?: boolean }): Promise<{ results: SearchResult[] }>;
 
   /**
    * Count total number of vectors in the database

@@ -84,9 +84,9 @@ export class SearchService {
 
           // Perform vector search
           const vectorResults = await this.db.search(queryEmbedding, searchFilters, limit);
-          results = vectorResults;
+          results.push(...vectorResults);
 
-          this.logger.info(`Semantic search completed: ${results.length} results found`);
+          this.logger.info(`Semantic search completed: ${vectorResults.length} results found`);
         } catch (embeddingError) {
           this.logger.error('Embedding generation failed:', embeddingError);
           if (searchType === 'semantic') {
@@ -98,20 +98,25 @@ export class SearchService {
         }
       }
 
-      if (searchType === 'keyword' || (searchType === 'hybrid' && results.length === 0)) {
-        try {
-          // Fallback to keyword search using the database query method
-          const keywordResults = await this.db.query(query, { limit });
-          results = keywordResults.results;
+      // TODO: Re-enable keyword search when query by metadata is supported in all DB providers
+      // if (searchType === 'keyword' || searchType === 'hybrid') {
+      //   try {
+      //     // Generate embedding for the query
+      //     const queryEmbedding = await this.embedding.embed(query);
 
-          this.logger.info(`Keyword search completed: ${results.length} results found`);
-        } catch (queryError) {
-          this.logger.error('Keyword search failed:', queryError);
-          throw new Error(
-            `Keyword search failed: ${queryError instanceof Error ? queryError.message : 'Unknown error'}`
-          );
-        }
-      }
+      //     const keywordResults = await this.db.query(queryEmbedding, { limit });
+      //     results.push(...keywordResults.results);
+
+      //     this.logger.info(
+      //       `Keyword search completed: ${keywordResults.results.length} results found`
+      //     );
+      //   } catch (queryError) {
+      //     this.logger.error('Keyword search failed:', queryError);
+      //     throw new Error(
+      //       `Keyword search failed: ${queryError instanceof Error ? queryError.message : 'Unknown error'}`
+      //     );
+      //   }
+      // }
 
       // Convert to formatted results
       return this.formatResults(results);
@@ -121,24 +126,13 @@ export class SearchService {
     }
   }
 
-  /**
-   * Browse all documents with optional limit
-   */
-  async browse(limit: number = 20): Promise<FormattedSearchResult[]> {
-    this.logger.info(`Browsing documents (limit: ${limit})`);
-
-    try {
-      const results = await this.db.query('', {
-        limit,
-        includeMetadata: true,
-      });
-
-      return this.formatResults(results.results, 1.0); // No relevance scoring for browse
-    } catch (error) {
-      this.logger.error('Browse operation failed:', error);
-      throw error;
-    }
-  }
+  // TODO: Implement browse method
+  // /**
+  //  * Browse all documents with optional limit
+  //  */
+  // async browse(_limit: number = 20): Promise<FormattedSearchResult[]> {
+  //   throw new Error('Browse method not implemented.');
+  // }
 
   /**
    * Get a specific document by ID

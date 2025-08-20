@@ -1,5 +1,5 @@
 import { VectorDatabase } from '../../database/interfaces/VectorDatabase';
-import { ChunkStrategy, VectorData, SearchResult } from '../../types/Common';
+import { ChunkStrategy, VectorData } from '../../types/Common';
 import { ObsidianManager, DiscoveryOptions } from './ObsidianManager';
 import { MarkdownParser } from '../parser/MarkdownParser';
 import { HeaderBasedChunker } from '../chunking/HeaderBasedChunker';
@@ -297,8 +297,8 @@ export class FileIndexer {
         return { chunkCount: 0 };
       }
 
-      // Remove existing chunks for this file
-      await this.removeExistingChunks(filePath);
+      // TODO: Remove existing chunks for this file
+      // await this.removeExistingChunks(filePath);
 
       // Process chunks and store in database
       const vectorData: VectorData[] = [];
@@ -355,32 +355,33 @@ export class FileIndexer {
     }
   }
 
+  // TODO: Implement actual removal logic based on metadata query
   /**
    * Remove existing chunks for a file from the database
    */
-  private async removeExistingChunks(filePath: string): Promise<void> {
-    try {
-      // Query for existing chunks from this file
-      const existingChunks = await this.vectorDb.query('', {
-        limit: 1000, // Reasonable limit for file chunks
-        includeMetadata: true,
-      });
+  // private async removeExistingChunks(_filePath: string): Promise<void> {
+    // try {
+    //   // Query for existing chunks from this file
+    //   const existingChunks = await this.vectorDb.query(undefined, {
+    //     limit: 1000, // Reasonable limit for file chunks
+    //     includeMetadata: true,
+    //   });
 
-      const chunksToDelete = existingChunks.results
-        .filter((result: SearchResult) => result.metadata.filePath === filePath)
-        .map((result: SearchResult) => result.id);
+    //   const chunksToDelete = existingChunks.results
+    //     .filter((result: SearchResult) => result.metadata.filePath === filePath)
+    //     .map((result: SearchResult) => result.id);
 
-      if (chunksToDelete.length > 0) {
-        await this.vectorDb.delete(chunksToDelete);
-        this.logger.debug(
-          `Removed ${chunksToDelete.length} existing chunks for: ${filePath}`
-        );
-      }
-    } catch (error) {
-      this.logger.warn(`Error removing existing chunks for ${filePath}:`, error);
-      // Continue with indexing even if cleanup fails
-    }
-  }
+    //   if (chunksToDelete.length > 0) {
+    //     await this.vectorDb.delete(chunksToDelete);
+    //     this.logger.debug(
+    //       `Removed ${chunksToDelete.length} existing chunks for: ${filePath}`
+    //     );
+    //   }
+    // } catch (error) {
+    //   this.logger.warn(`Error removing existing chunks for ${filePath}:`, error);
+    //   // Continue with indexing even if cleanup fails
+    // }
+  // }
 
   /**
    * Generate embedding for content
