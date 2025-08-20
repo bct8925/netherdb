@@ -53,6 +53,13 @@ export class MCPServer {
 
   async start(): Promise<void> {
     try {
+      // Check if database exists before initializing
+      const databaseExists = await this.db.databaseExists();
+      if (!databaseExists) {
+        this.logger.error('Database does not exist. Please run indexing first: netherdb index --full');
+        throw new Error('Database not found. Run "netherdb index --full" to create the database first.');
+      }
+
       // Initialize database and embedding provider
       try {
         await this.db.initialize();

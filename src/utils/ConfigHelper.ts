@@ -15,14 +15,28 @@ export interface BaseCommandOptions {
 
 export class ConfigHelper {
   /**
+   * Helper to detect global flag in command hierarchy (handles nested subcommands)
+   */
+  private static detectGlobalFlag(command: Command): boolean {
+    let current: Command | null = command;
+    while (current) {
+      if (current.getOptionValue('global')) {
+        return true;
+      }
+      current = current.parent;
+    }
+    return false;
+  }
+
+  /**
    * Load configuration with global flag support
    */
   static async loadConfigWithGlobalSupport(
     options: BaseCommandOptions,
     command: Command
   ): Promise<{ config: DatabaseConfig; isGlobal: boolean }> {
-    // Check if global flag is set on parent command
-    const isGlobal = command.parent?.getOptionValue('global') || false;
+    // Check if global flag is set anywhere in the command hierarchy
+    const isGlobal = ConfigHelper.detectGlobalFlag(command);
     const paths = GlobalConfig.getPaths(isGlobal);
 
     // Ensure global directories exist if using global flag
