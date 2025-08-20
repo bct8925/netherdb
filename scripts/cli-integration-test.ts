@@ -430,7 +430,7 @@ async function runCLICommandWithWikiLinkValidation(
         const wikiLinkTargets = result.metadata?.wikiLinkTargets || [];
         
         // Check if expected targets are present
-        const foundTargets = expectedTargets.filter(target => 
+        expectedTargets.filter(target => 
           wikiLinkTargets.some((wt: string) => wt.includes(target))
         );
         
